@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Igorludgero_Atualizapreco>
+            <active>true</active>
+            <codePool>local</codePool>
+        </Igorludgero_Atualizapreco>
+    </modules>
+</config>
