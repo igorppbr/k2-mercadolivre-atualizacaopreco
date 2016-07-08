@@ -21,15 +21,24 @@
                     </igorludgero_atualizapreco_detect_product_changes>
                 </observers>
             </catalog_product_save_after>
-            <!--<catalog_product_attribute_update_before>
+            <catalog_product_save_before>
                 <observers>
-                    <some_module_detect_product_attribute_changes>
+                    <igorludgero_atualizapreco_detect_product_changes_before>
                         <type>singleton</type>
-                        <class>some_module/observer</class>
-                        <method>detectProductAttributeChanges</method>
-                    </some_module_detect_product_attribute_changes>
+                        <class>atualizapreco/observer</class>
+                        <method>setPriceMl</method>
+                    </igorludgero_atualizapreco_detect_product_changes_before>
                 </observers>
-            </catalog_product_attribute_update_before>-->
+            </catalog_product_save_before>
+            <catalog_product_import_finish_before>
+                <observers>
+                    <igorludgero_atualizapreco_import_finish_after>
+                        <type>singleton</type>
+                        <class>atualizapreco/observer</class>
+                        <method>checkPricesCsv</method>
+                    </igorludgero_atualizapreco_import_finish_after>
+                </observers>
+            </catalog_product_import_finish_before>
         </events>
         <resources>
             <Igorludgero_Atualizapreco_setup>
