@@ -50,6 +50,7 @@ class Igorludgero_Atualizapreco_Helper_Data extends Mage_Core_Helper_Abstract
         foreach($products as $product)
         {
 
+
             //get child product IDs
             $children_ids_by_option = $product
                 ->getTypeInstance($product)
@@ -69,12 +70,14 @@ class Igorludgero_Atualizapreco_Helper_Data extends Mage_Core_Helper_Abstract
                 if(strpos($product->getSku(), 'bundle') == false)
                     $bundles[] = $product->getId();
             }
+
+
         }
 
         return $bundles;
     }
 
-    function updateBundlePriceMl($bundleId){
+    function updateBundlePriceMl($bundleId,$special_price){
         $_product = Mage::getModel('catalog/product')->load($bundleId);
         $selectionCollection = $_product->getTypeInstance(true)->getSelectionsCollection(
             $_product->getTypeInstance(true)->getOptionsIds($_product), $_product
@@ -94,17 +97,53 @@ class Igorludgero_Atualizapreco_Helper_Data extends Mage_Core_Helper_Abstract
 
         $priceMl = 0;
 
-        if($_product->getSpecialPrice())
-            $priceMl = $totalPrice * $_product->getSpecialPrice() / 100;
-        else
+        Mage::log("totalPrice: ".$totalPrice,null,"il_atualizapreco.log");
+        Mage::log("specialPrice: ".$special_price,null,"il_atualizapreco.log");
+
+        if(floatval($special_price)>0) {
+            Mage::log("preco special eh maior que zero",null,"il_atualizapreco.log");
+            $priceMl = $totalPrice * $special_price / 100;
+        }
+        else {
+            Mage::log("preco special eh menor ou igual a zero",null,"il_atualizapreco.log");
             $priceMl = $totalPrice;
+        }
 
-        $_product->setPriceMl($priceMl);
+        Mage::log("priceMl: ".$priceMl,null,"il_atualizapreco.log");
 
-        if($_product->save())
-            return 1;
-        return 0;
+        return $priceMl;
 
+    }
+
+    public function updatebundles($productId)
+    {
+        try {
+            $model = Mage::getModel('catalog/product');
+                    $contProd = 0;
+                    $idsOtherBundles = $this->findBundlesOfSimple($productId);
+                    Mage::log("ids dos bundles que pertence", null, "il_atualizapreco_cron.log");
+                    Mage::log($idsOtherBundles, null, "il_atualizapreco_cron.log");
+                    if (count($idsOtherBundles) > 0) {
+                        foreach ($idsOtherBundles as $idBundle) {
+                            $priceMl = $this->updateBundlePriceMl($idBundle);
+                            $_productBundle = $model->load($idBundle);
+                            if (strpos($_productBundle->getSku(), 'bundle') == false) {
+                                //Mage::log("vai salvar bundle atualizacao, id: " . $_productBundle->getName(), null, "il_atualizapreco_cron.log");
+                                $_productBundle->setData('price_ml', $priceMl);
+                                $_productBundle->getResource()->saveAttribute($_productBundle, 'price_ml');
+                                Mage::log("priceMl " . $priceMl . " salvo no produto de sku " . $_productBundle->getSku(), null, "il_atualizapreco_cron.log");
+                            }
+                        }
+                        return true;
+                    }
+            else{
+                return true;
+            }
+        }
+        catch(Exception $ex){
+            Mage::log("erro ao dar update nos bundles do simples: ".$ex->getMessage(),null,"il_atualizapreco_cron.log");
+        }
+        return false;
     }
 
 }

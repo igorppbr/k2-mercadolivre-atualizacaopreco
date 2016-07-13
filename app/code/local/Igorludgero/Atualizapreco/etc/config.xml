@@ -12,6 +12,15 @@
             </atualizapreco>
         </models>
         <events>
+            <adminhtml_block_html_before>
+                <observers>
+                    <igorludgero_atualizapreco_changeattributeset>
+                        <type>singleton</type>
+                        <class>atualizapreco/observer</class>
+                        <method>addMassactionToProductGrid</method>
+                    </igorludgero_atualizapreco_changeattributeset>
+                </observers>
+            </adminhtml_block_html_before>
             <catalog_product_save_after>
                 <observers>
                     <igorludgero_atualizapreco_detect_product_changes>
@@ -66,8 +75,21 @@
             </atualizapreco>
         </helpers>
     </global>
+    <crontab>
+        <jobs>
+            <igorludgero_atualizapreco_updatebundles>
+                <schedule>
+                    <!--<cron_expr>*/5 * * * *</cron_expr>-->
+                    <cron_expr>0 2 * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>atualizapreco/observer::updateBundlesAfterSimple</model>
+                </run>
+            </igorludgero_atualizapreco_updatebundles>
+        </jobs>
+    </crontab>
     <admin>
-        <routers>
+        <!--<routers>
             <Igorludgero_Atualizapreco>
                 <use>admin</use>
                 <args>
@@ -75,6 +97,15 @@
                     <frontName>atualizapreco</frontName>
                 </args>
             </Igorludgero_Atualizapreco>
+        </routers>-->
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <Igorludgero_Atualizapreco before="Mage_Adminhtml">Igorludgero_Atualizapreco_Adminhtml</Igorludgero_Atualizapreco>
+                    </modules>
+                </args>
+            </adminhtml>
         </routers>
     </admin>
     <frontend>
