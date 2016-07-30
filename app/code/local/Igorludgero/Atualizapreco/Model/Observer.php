@@ -12,6 +12,7 @@ class Igorludgero_Atualizapreco_Model_Observer {
         $productId = $observer->getProduct()->getId();
         $model = Mage::getModel('catalog/product');
         $_product = $model->load($productId);
+        $contador = 0;
         if($_product->getTypeId() == 'simple'){
             $skuA = $_product->getSku()."-bundleA";
             $skuB = $_product->getSku()."-bundleB";
@@ -20,8 +21,6 @@ class Igorludgero_Atualizapreco_Model_Observer {
             $bundleB = Mage::getModel('catalog/product')->loadByAttribute('sku',$skuB);
             $bundleC = Mage::getModel('catalog/product')->loadByAttribute('sku',$skuC);
             $helper = Mage::helper('atualizapreco');
-
-            $contador = 0;
 
             if($bundleA!=null) {
 
@@ -50,16 +49,17 @@ class Igorludgero_Atualizapreco_Model_Observer {
                 }
             }
 
-            $idsOtherBundles = $helper->findBundlesOfSimple($_product->getId());
-            if(count($idsOtherBundles)>0){
-                foreach($idsOtherBundles as $idBundle){
-                    $contador = $contador + $helper->updateBundlePriceMl($idBundle);
+            if($helper->updatebundles($_product->getId())){
+                $contador++;
+            }
+
+            if($contador) {
+                if ($contador > 0) {
+                    Mage::getSingleton('core/session')->addSuccess($contador . " bundles relacionados a este produto foram atualizados.");
                 }
             }
 
         }
-        if($contador)
-            Mage::getSingleton('core/session')->addSuccess($contador." bundles relacionados a este produto foram atualizados.");
 
     }
 
@@ -76,49 +76,6 @@ class Igorludgero_Atualizapreco_Model_Observer {
             if($_product->getTypeId() == 'simple'){
                 $_product->setPriceMl($_product->getFinalPrice());
                 $_product->save();
-                /*
-                $skuA = $_product->getSku()."-bundleA";
-                $skuB = $_product->getSku()."-bundleB";
-                $skuC = $_product->getSku()."-bundleC";
-                $bundleA = Mage::getModel('catalog/product')->loadByAttribute('sku',$skuA);
-                $bundleB = Mage::getModel('catalog/product')->loadByAttribute('sku',$skuB);
-                $bundleC = Mage::getModel('catalog/product')->loadByAttribute('sku',$skuC);
-                $helper = Mage::helper('atualizapreco');
-
-                if($bundleA!=null) {
-
-                    if ($bundleA->getData() != null) {
-                        //Mage::log("abriu o bundleA: ".$bundleA->getSku(),null,"il_atualizacaopreco.log");
-                        if ($helper->updatePrice($_product, $bundleA, 1))
-                            $contador++;
-                    }
-                }
-
-                if($bundleB!=null) {
-
-                    if ($bundleB->getData() != null) {
-                        //Mage::log("abriu o bundleB",null,"il_atualizacaopreco.log");
-                        if ($helper->updatePrice($_product, $bundleB, 2))
-                            $contador++;
-                    }
-                }
-
-                if($bundleC) {
-
-                    if ($bundleC->getData() != null) {
-                        //Mage::log("abriu o bundleC",null,"il_atualizacaopreco.log");
-                        if ($helper->updatePrice($_product, $bundleC, 3))
-                            $contador++;
-                    }
-                }
-
-                $idsOtherBundles = $helper->findBundlesOfSimple($_product->getId());
-                if(count($idsOtherBundles)>0){
-                    foreach($idsOtherBundles as $idBundle){
-                        $contador = $contador + $helper->updateBundlePriceMl($idBundle);
-                    }
-                }*/
-
             }
 
         }
@@ -132,9 +89,53 @@ class Igorludgero_Atualizapreco_Model_Observer {
 
     public function setPriceMl($observer){
         $_product = $observer->getProduct();
+        $data = $_product->getData();
+        //$origData = $_product->getOrigData();
+        //Mage::log($data,null,"data.log");
+        //Mage::log($data,null,"newdata.log");
         if($_product->getTypeId() == 'simple') {
             Mage::log("vai setar price ml no produto de sku " . $_product->getSku(), null, "il_atualizapreco.log");
             $_product->setPriceMl($_product->getFinalPrice());
+        }
+        else if($_product->getTypeId() == 'bundle'){
+            if (strpos($_product->getSku(), 'bundle') == false) {
+                Mage::log("entrou no setPriceML bundle: " . $_product->getId(), null, "il_atualizapreco.log");
+                $helper = Mage::helper('atualizapreco');
+                $priceMl = $helper->updateBundlePriceMl($_product->getId(), $data['special_price']);
+                $_product->setPriceMl($priceMl);
+            }
+        }
+    }
+
+    public function addMassactionToProductGrid($observer)
+    {
+        $block = $observer->getBlock();
+        if($block instanceof Mage_Adminhtml_Block_Catalog_Product_Grid){
+
+            $sets = Mage::getResourceModel('eav/entity_attribute_set_collection')
+                ->setEntityTypeFilter(Mage::getModel('catalog/product')->getResource()->getTypeId())
+                ->load()
+                ->toOptionHash();
+
+            $block->getMassactionBlock()->addItem('igorludgero_atualizabundle', array(
+                'label'=> Mage::helper('catalog')->__('Atualizar bundles do produto'),
+                'url'  => $block->getUrl('*/*/updatebundles', array('_current'=>true))
+            ));
+        }
+    }
+
+    public function updateBundlesAfterSimple(){
+        try {
+            $helper = Mage::helper('atualizapreco');
+            Mage::log("vai executar o cron no updateBundlesAfterSimple", null, "il_atualizapreco_cron.log");
+            $simpleCollection = Mage::getModel('catalog/product')->getCollection()->addFieldToFilter('type_id', 'simple')->getAllIds();
+            Mage::log("ids de todos os bundles",null,"il_atualizapreco_cron.log");
+            foreach($simpleCollection as $id){
+                $helper->updatebundles($id);
+            }
+        }
+        catch(Exception $ex){
+            Mage::log("erro no cron no updateBundlesAfterSimple: ".$ex->getMessage(), null, "il_atualizapreco_cron.log");
         }
     }
 
